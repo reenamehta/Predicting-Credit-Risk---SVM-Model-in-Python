@@ -5,178 +5,152 @@ Created on Sat Nov 24 13:55:59 2018
 @author: Reena
 """
 ############################Regression#########################################
-import os
-import pandas as pd
 import numpy as np
-os.chdir("F:/DATA SCIENTIST/Python/24_25Nov/")
-trainData=pd.read_csv("R_Module_Day_7.2_Credit_Risk_Train_data.csv")
-testData=pd.read_csv("R_Module_Day_8.2_Credit_Risk_Test_data.csv")
+import pandas as pd
+import os
 
-# create a column as called source for both train ad test data
-trainData["Source"]="train"
-testData["Source"]="test"
+####IMPORTING TRAINING AND TEST DATA SETS ######
+TrainData = pd.read_csv("R_Module_Day_7.2_Credit_Risk_Train_data.csv")
+TestData = pd.read_csv("R_Module_Day_8.2_Credit_Risk_Test_data.csv")
 
-# dataset column names read
-trainData.columns
-testData.columns
+####CREATING A NEW COLUMN SOURCE UNDER BOTH TRAIN AND TEST DATA
+TrainData["Source"] = "Train"
+TestData["Source"] = "Test"
 
-# combind train and test data
-combData=pd.concat([trainData,testData], axis=0)
-combData.shape # confirm both data have been append one below the other
-combData.head()
-combData.describe()
+####COMBINE BOTH TRAIN AND TEST AS FULL DATA
+FullData = pd.concat([TrainData,TestData])
+FullData.shape
 
-# missing values check   NA values
-combData.isnull().sum()
-combData ["Gender"].isnull().sum()
+###View starting 5 records
+FullData.head()
 
-# fill missing values
+####Check the summary of Numerical variables
+FullData.describe()
 
-#combData ["Gender"] = combData["Gender"].fillna(combData ["Gender"].mode())
-#cols_with_missing = (col for col in combData.columns if combData[col].isnull().any())
-for i in list(combData):
-    #if((i not in ['Loan ID','Load_Status','Source'])&(combData[i].isnull().sum()>0)):
-      if( combData[i].dtype==object):
-          tempimput=combData[i][combData.Source=='train'].mode()[0]
-          combData[i].fillna(tempimput,inplace=True)
-          # combData[i]=combData[i].fillna(combData.mode()[0])
-           #combData[i]= combData[i].fillna(tempimput) 
-      else:#(combData[i].dtype ==float64):
-            tempimput=combData[i][combData.Source=='train'].median()
-            combData[i].fillna(tempimput,inplace=True)#combData[:,i]=combData.iloc[:,i].fillna(combData.median())
-         
-combData.isnull().sum()
+####Working on Categorical variable Dependents
+FullData.Dependents.value_counts()   ###THere is an invalid category as 3+
 
-#dummy variable creation means:- categoery variable convert into continues values
-combData.dtypes
-dummies=pd.get_dummies(combData[['Gender','Married','Dependents','Education','Self_Employed', 'Property_Area']], drop_first=True, dtype=int)
-dummies
+FullData.Dependents = np.where(FullData.Dependents == '3+',3,FullData.Dependents).astype(float)
+FullData.Dependents.value_counts()
+FullData.Dependents.dtype
+
+###Finding MISSING VALUES
+FullData.isnull().sum()
+
+## MISSING VALUE IMPUTATION
+for col_name in list(FullData):
+    if ((col_name not in ['Loan_ID', 'Loan_Status', 'Source']) & (FullData[col_name].isnull().sum() >0)):
+        if(FullData[col_name].dtype != object):
+            temp1 = FullData[col_name][FullData.Source == "Train"].median()
+            FullData[col_name].fillna(temp1, inplace=True)
+        else:
+            temp2 = FullData[col_name][FullData.Source =="Train"].mode()[0]
+            FullData[col_name].fillna(temp2, inplace=True)
+
+FullData.isnull().sum()
+
+###OUTLIER DETECTION AND CORRECTION
+#ApplicantIncome
+FullData[FullData.Source == "Train"].boxplot(column = 'ApplicantIncome')
+FullData.ApplicantIncome.dtype
+np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],[95,96,97,98,99])
+        
+FullData.ApplicantIncome = np.where(FullData.ApplicantIncome > np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],99),np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],99),FullData.ApplicantIncome)
+FullData.ApplicantIncome = np.where(FullData.ApplicantIncome > np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],95),np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],95),FullData.ApplicantIncome)
+FullData.ApplicantIncome = np.where(FullData.ApplicantIncome > np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],90),np.percentile(FullData.loc[FullData.Source == "Train","ApplicantIncome"],90),FullData.ApplicantIncome)
+
+# CoapplicantIncome
+FullData.columns
+FullData[FullData.Source == "Train"].boxplot(column ="CoapplicantIncome")
+np.percentile(FullData.loc[FullData.Source == "Train","CoapplicantIncome"],99)
+
+FullData.CoapplicantIncome = np.where(FullData.CoapplicantIncome > np.percentile(FullData.loc[FullData.Source == "Train","CoapplicantIncome"],99),np.percentile(FullData.loc[FullData.Source == "Train","CoapplicantIncome"],99),FullData.CoapplicantIncome)
+FullData.CoapplicantIncome = np.where(FullData.CoapplicantIncome > np.percentile(FullData.loc[FullData.Source == "Train","CoapplicantIncome"],95),np.percentile(FullData.loc[FullData.Source == "Train","CoapplicantIncome"],95),FullData.CoapplicantIncome)
+
+# LoanAmount
+FullData[FullData.Source == "Train"].boxplot(column ="LoanAmount")
+np.percentile(FullData.loc[FullData.Source =="Train","LoanAmount"],99)
+FullData.LoanAmount = np.where(FullData.LoanAmount > np.percentile(FullData.loc[FullData.Source =="Train","LoanAmount"],99),np.percentile(FullData.loc[FullData.Source=="Train","LoanAmount"],99),FullData.LoanAmount)
+FullData.LoanAmount = np.where(FullData.LoanAmount > np.percentile(FullData.loc[FullData.Source =="Train","LoanAmount"],95),np.percentile(FullData.loc[FullData.Source=="Train","LoanAmount"],95),FullData.LoanAmount)
+FullData.LoanAmount = np.where(FullData.LoanAmount > np.percentile(FullData.loc[FullData.Source =="Train","LoanAmount"],90),np.percentile(FullData.loc[FullData.Source=="Train","LoanAmount"],90),FullData.LoanAmount)
+
+########ONE HOT ENCODING OF CATEGORICAL VARIABLES  BY CREATING DUMMY VARIABLES ########
+cat = FullData.loc[:,FullData.dtypes == object].columns
+Dummy = pd.get_dummies(FullData[cat].drop(['Loan_ID', 'Source', 'Loan_Status'], axis = 1),drop_first = True)
+Dummy.shape
+Dummy.columns
+
+FullData2 = pd.concat([FullData,Dummy],axis =1)
+FullData2.shape
+
+Cols_To_Drop = ['Loan_ID', 'Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area']
+FullData3 = FullData2.drop(Cols_To_Drop,axis = 1).copy()
+FullData3.columns
+FullData3.shape
+
+# Convert Dependent variable into 0,1. If Loan_Status = N, then 1 else 0
+FullData3.Loan_Status = np.where(FullData3.Loan_Status == 'N',1,0)
+FullData3.Loan_Status.value_counts()
+FullData3.shape
+FullData3.dtypes
+
+######SAMPLING #######################
+# Divide the data into Train and Test based on Source column and 
+# make sure you drop the source column
+Train = FullData3.loc[FullData3.Source == "Train",].drop("Source",axis = 1).copy()
+Train.shape
+
+Test = FullData3.loc[FullData3.Source == "Test",].drop("Source",axis =1).copy()
+Test.shape
+
+###DIVIDE EACH DATA SET AS INDEPENDENT AND DEPENDENT VARAIBLES
+train_X = Train.drop("Loan_Status",axis = 1)
+train_y = Train["Loan_Status"].copy()
+test_X = Test.drop("Loan_Status",axis = 1)
+test_y = Test["Loan_Status"].copy()
+
+
+###################MODEL BUILDING ###############################
+###SVM MODEL
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report
+
+M1 = SVC()
+Model1 = M1.fit(train_X,train_y)
+Pred1 = Model1.predict(test_X)
+
+###CONFUSION MATRIX ##########################################
+from sklearn.metrics import confusion_matrix
+conf1 = confusion_matrix(test_y,Pred1)
+print(conf1)     #### 79% accuracy
+accuracy = ((conf1[0][0] + conf1[1][1])/test_y.shape[0]) * 100
+
+report1 = classification_report(test_y,Pred1)
+print(report1)
+
+###Manual GRID Searches
+Model_Validation_Df = pd.DataFrame()
+mycost_List = []
+mygamma_List = []
+mykernel_List = []
+accuracy_List = []
+for mycost in [1,2]:
+    for mygamma in [0.01, 0.1]:
+        for mykernel in ['sigmoid','rbf']:
+            Temp_Model = SVC(C = mycost, kernel = mykernel, gamma = mygamma)
+            Temp_Model = Temp_Model.fit(train_X, train_y)
+            Test_Pred = Temp_Model.predict(test_X)
+            Confusion_Mat = confusion_matrix(test_y, Test_Pred)
+            Temp_Accuracy = ((Confusion_Mat[0][0] + Confusion_Mat[1][1])/test_y.shape[0])*100
+            print(mycost, mygamma, mykernel)
+            print(Temp_Accuracy)
+            print("******************************")
+            mycost_List.append(mycost)
+            mygamma_List.append(mygamma)
+            mykernel_List.append(mykernel)
+            accuracy_List.append(Temp_Accuracy)
             
-CAT_VAR=['Gender','Married','Dependents','Education','Self_Employed', 'Property_Area']
-#dummiesdf=pd.get_dummies(combData[CAT_VAR],drop_first =True)  #,drop_first =True                   
-#dummiesdf.shape
-
-# combind fd and dummey call in df2
-df2=pd.concat([dummies,combData], axis = 1)
-df2.columns
-
-# df2, remove the origional all the catecorical variable stor into df3
-droplist=['Gender','Married','Dependents','Education','Self_Employed','Property_Area']
-#df3=pd.get_dummies(combData, columns=droplist, drop_first=True)
-df3=df2.drop(['Gender','Married','Dependents','Education','Self_Employed','Property_Area'], axis=1) 
- 
-# df3 remove column loan_ID -->df4
-#df4=df3.drop(combData.Loan_ID, axis=1)
-#df5=df3.drop(['Loan_ID'], axis=1).copy()
-df4=df3.drop(['Loan_ID'], axis=1) 
-#df4=df3.drop(['Source'], axis=1) 
-#df4.shape
-#df4.columns
-#origional show into df4 int,float,dummy_df,load_status,Source
-# be ready df4
-df4.shape
-df4.columns
-
-#df3=pd.get_dummies(combData, columns=droplist, drop_first=True, dtype=int64)
-#trainData=df5.copy()
-#df5=trainData.copy()
-df4["Intercept"]=1
-#trainData["Intercept"]=1
-#testData["Intercept"]=1
-#df4.groupby('Loan_Status').count()
-df4['Loan_Status'].value_counts() # count number of Y and N values 
-df4['Loan_Status'] = df4['Loan_Status'].map({'Y': 0, 'N': 1})  # replace Y to 1 and N to 0
-#df5=trainData.copy()
-#df4=df4.drop(['Loan_Status_Y'],axis=1)
-#testData=testData.drop(['Source'],axis=1)
-
-Train_temp = df4.loc[df4.Source == "train",:].drop('Source', axis = 1).copy()
-Train_temp.shape
-Test_temp = df4.loc[df4.Source == "test",:].drop('Source', axis = 1).copy()
-Test_temp.shape
-
-test_x=Test_temp.drop('Loan_Status',axis=1).copy()
-test_Y=Test_temp['Loan_Status'].copy()
-train_x=Train_temp.drop('Loan_Status',axis=1).copy()
-train_Y=Train_temp['Loan_Status'].copy()
-            
-#build logistic model using statsmodels library
-from statsmodels.api import Logit
-M1=Logit(train_Y,train_x)
-m1_Model=M1.fit()   # model build       
-m1_Model.summary()  #model summary
-
-# remove  highest signnificant variable one by one to improve the model              
-Cols_To_Drop=['Dependents_3+']
-M2=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M2Model=M2.fit()
-M2Model.summary()
- 
-# Drop Self_Employed_Yes
-Cols_To_Drop.append('Self_Employed_Yes')
-M3 = Logit(train_Y, train_x.drop(Cols_To_Drop, axis = 1))
-M3_Model = M3.fit()
-M3_Model.summary()
-
-Cols_To_Drop.append('Dependents_2')
-M4=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M4Model=M4.fit()
-M4Model.summary()
-
-Cols_To_Drop.append('Property_Area_Urban')
-M5=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M5Model=M5.fit()
-M5Model.summary()
-
-Cols_To_Drop.append('Loan_Amount_Term')
-M6=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M6Model=M6.fit()
-M6Model.summary()
-
-Cols_To_Drop.append('Gender_Male')
-M7=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M7Model=M7.fit()
-M7Model.summary()
-
-
-Cols_To_Drop.append('ApplicantIncome')
-M8=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M8Model=M8.fit()
-M8Model.summary()
-
-Cols_To_Drop.append('LoanAmount')
-M8l=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M8lModel=M8l.fit()
-M8lModel.summary()
-
-Cols_To_Drop.append('Education_Not Graduate')
-M9=Logit(train_Y,train_x.drop(Cols_To_Drop,axis=1))            
-M9Model=M9.fit()
-M9Model.summary()
-
-############predict on testset
-columns_to_use=train_x.drop(Cols_To_Drop,axis=1).columns
-test_x['test_prob']=M9Model.predict(test_x[columns_to_use])
-test_x.columns
-
- 
-##########confusion matrix
-confusionmat=pd.crosstab(test_x.test_class,test_Y)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Model_Validation_Df = pd.DataFrame({'Cost': mycost_List, 
+                                    'Gamma': mygamma_List, 
+                                    'Kernel': mykernel_List, 
+                                    'Accuracy': accuracy_List})
